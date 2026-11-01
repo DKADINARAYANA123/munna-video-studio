@@ -1,0 +1,87 @@
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String         @id @default(cuid())
+  email     String         @unique
+  name      String?
+  createdAt DateTime       @default(now())
+  workflows Workflow[]
+  projects  VideoProject[]
+}
+
+model Workflow {
+  id            String       @id @default(cuid())
+  userId        String
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  description   String?
+  triggerType   String
+  triggerConfig Json
+  actions       Json
+  enabled       Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  runs          WorkflowRun[]
+
+  @@index([userId, enabled])
+}
+
+model WorkflowRun {
+  id         String    @id @default(cuid())
+  workflowId String
+  workflow   Workflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  status     String    @default("PENDING")
+  input      Json
+  output     Json?
+  error      String?
+  attempts   Int       @default(0)
+  startedAt  DateTime?
+  finishedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([workflowId, createdAt])
+}
+
+model VideoProject {
+  id         String      @id @default(cuid())
+  userId     String
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title      String
+  sourceType String
+  sourceUrl  String?
+  sourceKey  String?
+  status     String      @default("QUEUED")
+  transcript Json?
+  highlights Json?
+  settings   Json?
+  error      String?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  clips      ClipAsset[]
+
+  @@index([userId, createdAt])
+}
+
+model ClipAsset {
+  id        String       @id @default(cuid())
+  projectId String
+  project   VideoProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title     String
+  startSec  Float
+  endSec    Float
+  status    String       @default("PENDING")
+  storageKey String?
+  publicUrl String?
+  captions  Json?
+  createdAt DateTime     @default(now())
+
+  @@index([projectId, status])
+}
